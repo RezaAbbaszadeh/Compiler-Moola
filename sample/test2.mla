@@ -4,11 +4,22 @@ class A:
     function foo(input1: int, input2: bool, input3: int) returns string:
         var result = "";
         if(input2 == true) begin
+            var t = 20;
             while(input1>0) begin
+                var x = 10;
                 result = result + "again";
                 input2 = input2 - 1;
             end
         end
+        elif(input1 == 10) begin
+
+           begin
+
+           end
+
+        end
+
+        else ;
         return result;
     end
 end

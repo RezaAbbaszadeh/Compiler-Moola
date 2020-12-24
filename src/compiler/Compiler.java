@@ -21,7 +21,7 @@ public class Compiler {
         parser.setBuildParseTree(true);
         ParseTree tree = parser.program(); // root
         ParseTreeWalker walker = new ParseTreeWalker();
-        MoolaListener listener = new ProgramPrinter();
+        MoolaListener listener = new SymbolTableGenerator();
 
         walker.walk(listener, tree);
 
