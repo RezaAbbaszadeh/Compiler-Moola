@@ -1,0 +1,60 @@
+//this is a area calculator app
+
+class Shape:
+    public field color string;
+
+    /*
+    *
+    * override this method in child classes
+    *
+    */
+    function calculateArea() returns int :
+        return 0;
+    end
+
+    function compare(shape2: Shape) returns int:
+        var selfArea = self.calculateArea();
+        var otherArea = shape2.calculateArea();
+        if(selfArea == otherArea)
+            return 0;
+        elif(selfArea > otherArea)
+            return 1;
+        else
+            return -1;
+    end
+end
+
+class Rectangle inherits Shape:
+    public field width, height int;
+
+    function calculateArea() returns int :
+        return width * height;
+    end
+
+end
+
+class Circle inherits Shape:
+    public field radius int;
+
+    function calculateArea() returns int :
+        var pi = 3;
+        return pi * radius * radius;
+    end
+end
+
+
+entry class MainClass:
+    function main() returns int :
+
+        var rectangle = new Rectangle();
+        rectangle.width = 10;
+        rectangle.height = 30;
+        print("rectangle area: ");
+        print(rectangle.calculateArea());
+
+        var circle = new Circle();
+        circle.radius = 4;
+        print("circle area: ");
+        print(circle.calculateArea());
+    end
+end

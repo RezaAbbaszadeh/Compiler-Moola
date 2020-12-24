@@ -1,0 +1,38 @@
+class A:
+    public field f1,f2,f3,f4 int;
+
+    function foo(input1: int, input2: bool, input3: int) returns string:
+        var result = "";
+        if(input2 == true) begin
+            while(input1>0) begin
+                result = result + "again";
+                input2 = input2 - 1;
+            end
+        end
+        return result;
+    end
+end
+
+class B inherits Any:
+   public field arr int[];
+
+   private function doIt(a: A) returns Any:
+        arr[0] = a.f1;
+        arr[1] = a.f2;
+        arr[2] = a.f3;
+
+        print(a.foo());
+   end
+end
+
+
+entry class MyClass:
+    field a A;
+    function main() returns int:
+        a = new A();
+        var b = new B();
+        var temp = b.doIt(a);
+
+        return 0;
+    end
+end
