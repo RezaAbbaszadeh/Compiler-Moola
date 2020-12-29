@@ -1,7 +1,7 @@
 class A:
     public field f1,f2,f3,f4 int;
 
-    function foo(input1: int, input2: bool, input3: int) returns string:
+    function foo(input1: int, input2: bool, input3: A) returns string:
         var result = "";
         if(input2 == true) begin
             var t = 20;
@@ -33,6 +33,17 @@ class B inherits Any:
         arr[2] = a.f3;
 
         print(a.foo());
+
+   end
+
+   public function x() returns int:
+        if(a)
+            if(b) var x = 0;
+            else
+                while(d)
+                    if(c)
+                        var y = 0;
+
    end
 end
 

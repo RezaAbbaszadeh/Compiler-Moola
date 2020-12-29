@@ -22,6 +22,8 @@ public class Method extends TableRow {
              parametersType) {
             params.append(param).append(",");
         }
+        if(params.length() > 0)
+            params.deleteCharAt(params.length()-1);
 
         return "Method:" + printKeyValue("name", name) +
                 printKeyValue("return type", returnType) + printKeyValue("accessModifier", accessModifier) +

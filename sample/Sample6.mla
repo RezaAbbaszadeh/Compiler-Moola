@@ -1,0 +1,40 @@
+class father:
+	function main() returns int:
+		i=0;
+		while(i<11)begin
+			if(i%3==0)
+				print("3k");
+			elif(i%3==1)
+				print("3k+1");
+			else
+				print("3k+2");
+			i++;
+		end
+		return 0;
+	end
+end
+entry class child inherits father:
+	field goods int[];
+	function length() returns int:
+		return goods.length;
+	end
+	function populate() returns string:
+		goods=new int[10];
+		i=0;
+		var j=0;
+		if( a == 1 )
+		    if( a == 2 )
+		        return 0;
+		    else
+		        return 1;
+		return "hello";
+		while( true );;;
+		while(true)begin
+			goods[i]=j*3;
+			i++;
+			return "papa";
+			if(i==10)
+				break;
+		end
+	end
+end

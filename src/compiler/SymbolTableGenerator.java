@@ -6,7 +6,6 @@ import gen.MoolaListener;
 import gen.MoolaParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
@@ -72,7 +71,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
         List<TerminalNode> ids = ctx.ID();
         for (TerminalNode id : ids) {
-            currentScope.table.put("field_" + id.toString(), new Field(id.toString(), ctx.fieldType.getText()));
+            currentScope.table.put("field_" + id.toString(), new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
         }
     }
 
@@ -95,11 +94,14 @@ public class SymbolTableGenerator implements MoolaListener {
     public void enterMethodDeclaration(MoolaParser.MethodDeclarationContext ctx) {
         StringBuilder type = new StringBuilder();
         ArrayList<String> paramTypes = new ArrayList<>();
+        ArrayList<String> paramNames = new ArrayList<>();
         if (ctx.param1 != null) {
-            paramTypes.add(ctx.typeP1.getText());
+//            paramTypes.add(ctx.typeP1.getText());
             List<MoolaParser.MoolaTypeContext> inputs = ctx.moolaType();
-            for (int i = 1; i < inputs.size() - 1; i++) { //param2 s
+            List<TerminalNode> names = ctx.ID();
+            for (int i = 0; i < inputs.size() - 1; i++) { //param2 s
                 paramTypes.add(inputs.get(i).st.getText());
+                paramNames.add(names.get(i + 1).getSymbol().getText());
             }
         }
 
@@ -110,6 +112,9 @@ public class SymbolTableGenerator implements MoolaListener {
         currentScope.table.put("method_" + ctx.methodName.getText(),
                 new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
         currentScope = new Scope("Method: " + ctx.methodName.getText(), currentScope);
+        for (int i =0; i<paramNames.size() ; i++) {
+            currentScope.table.put("input_" + paramNames.get(i), new MethodInput(paramNames.get(i), paramTypes.get(i)));
+        }
     }
 
     @Override
@@ -216,7 +221,7 @@ public class SymbolTableGenerator implements MoolaListener {
     @Override
     public void enterStatementBlock(MoolaParser.StatementBlockContext ctx) {
         ParserRuleContext grandparent = ctx.getParent().getParent();
-        if(grandparent instanceof MoolaParser.StatementClosedLoopContext ||
+        if (grandparent instanceof MoolaParser.StatementClosedLoopContext ||
                 grandparent instanceof MoolaParser.ClosedConditionalContext ||
                 grandparent instanceof MoolaParser.OpenConditionalContext
                 ) return;
@@ -226,7 +231,7 @@ public class SymbolTableGenerator implements MoolaListener {
     @Override
     public void exitStatementBlock(MoolaParser.StatementBlockContext ctx) {
         ParserRuleContext grandparent = ctx.getParent().getParent();
-        if(grandparent instanceof MoolaParser.StatementClosedLoopContext ||
+        if (grandparent instanceof MoolaParser.StatementClosedLoopContext ||
                 grandparent instanceof MoolaParser.ClosedConditionalContext ||
                 grandparent instanceof MoolaParser.OpenConditionalContext
                 ) return;

@@ -12,6 +12,6 @@ public class Class extends TableRow{
 
     @Override
     public String getText() {
-        return "Class:"+ printKeyValue("name", name) + printKeyValue("parent", parentClass);
+        return "Class:"+ printKeyValue("name", name) + printKeyValue("is Entry", String.valueOf(isMain)) + printKeyValue("inherits", parentClass);
     }
 }

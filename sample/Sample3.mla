@@ -1,0 +1,40 @@
+class felanJaa:
+	function bedeEsmRo() returns string:
+		return esm;
+	end
+	field esm string;
+	function hasProfitForMe(you:felanAagha)returns boolean:
+		if(felanAagha.makan=="oonjaa" || felanAagha.makan=="degarJaa")
+			return true;
+		return false;
+	end
+end
+
+class felanAagha inherits felanJaa:
+	public field makan string;
+	function boroBe(jaa:felanJaa) returns int:
+		esmesh=jaa.bedeEsmRo();
+		print("raftam be ");
+		if( esmesh <> 2 ) begin
+		    return 0;
+		end
+		else return 1;
+		print(esmesh);
+	end
+end
+entry class donyaa:
+	private field felani felanAagha;
+	private field felanJaaHaa felanJaa[];
+	function main() returns int:
+		felani=new felanAagha();
+		felanJaaHaa=new felanJaa[20];
+		i=0;
+		while(i<felanJaaHaa.length)begin
+			if(!felanJaaHaa[i].hasProfitForMe(felani , i + 1 * 2))
+				continue;
+			var a = felani.boroBe(felanJaaHaa[i]);
+			i++;
+		end
+		return 0;
+	end
+end
