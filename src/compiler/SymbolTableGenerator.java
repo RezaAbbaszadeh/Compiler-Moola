@@ -14,10 +14,11 @@ import java.util.Map;
 
 public class SymbolTableGenerator implements MoolaListener {
 
-    private Scope currentScope = new Scope("Program", null);
+    private Scope currentScope;
 
     @Override
     public void enterProgram(MoolaParser.ProgramContext ctx) {
+        currentScope = new Scope("Program", ctx.getStart().getLine(), null);
     }
 
     @Override
@@ -28,7 +29,7 @@ public class SymbolTableGenerator implements MoolaListener {
     }
 
     private void printTree(Scope scope) {
-        System.out.println("------------ " + scope.name + " ------------");
+        System.out.println("-------------- " + scope.name + " : " + scope.lineNumber + " --------------");
         for (Map.Entry<String, TableRow> row : scope.table.entrySet()) {
             System.out.println("Key = " + row.getKey() + " | Value = " + row.getValue().getText());
         }
@@ -47,7 +48,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
         currentScope.table.put("class_" + ctx.className.getText(),
                 new Class(ctx.className.getText(), parentClass, isMainClass));
-        currentScope = new Scope("Class: " + ctx.className.getText(), currentScope);
+        currentScope = new Scope("Class: " + ctx.className.getText(), ctx.getStart().getLine(), currentScope);
     }
 
     @Override
@@ -111,7 +112,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
         currentScope.table.put("method_" + ctx.methodName.getText(),
                 new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
-        currentScope = new Scope("Method: " + ctx.methodName.getText(), currentScope);
+        currentScope = new Scope("Method: " + ctx.methodName.getText(), ctx.getStart().getLine(), currentScope);
         for (int i =0; i<paramNames.size() ; i++) {
             currentScope.table.put("input_" + paramNames.get(i), new MethodInput(paramNames.get(i), paramTypes.get(i)));
         }
@@ -127,19 +128,19 @@ public class SymbolTableGenerator implements MoolaListener {
         if (ctx.getParent() instanceof MoolaParser.ClosedConditionalContext) {
             MoolaParser.ClosedConditionalContext p = (MoolaParser.ClosedConditionalContext) ctx.getParent();
             if (p.ifStat == ctx)
-                currentScope = new Scope("if", currentScope);
+                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
             else if (p.elifStat == ctx)
-                currentScope = new Scope("elif", currentScope);
+                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
             else
-                currentScope = new Scope("else", currentScope);
+                currentScope = new Scope("else", ctx.getStart().getLine(), currentScope);
         } else if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
             if (p.secondIfStat == ctx)
-                currentScope = new Scope("if", currentScope);
+                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
             else if (p.closedStatement().subList(1, p.closedStatement().size()).contains(ctx))
-                currentScope = new Scope("elif", currentScope);
+                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
             else if (p.thirdIfStat == ctx)
-                currentScope = new Scope("if", currentScope);
+                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
         }
     }
 
@@ -176,7 +177,7 @@ public class SymbolTableGenerator implements MoolaListener {
         if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
             if (p.elseStmt == ctx)
-                currentScope = new Scope("else", currentScope);
+                currentScope = new Scope("else", ctx.getStart().getLine(), currentScope);
         }
     }
 
@@ -192,9 +193,9 @@ public class SymbolTableGenerator implements MoolaListener {
         if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
             if (p.ifStat == ctx)
-                currentScope = new Scope("if", currentScope);
+                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
             else if (p.lastElifStmt == ctx)
-                currentScope = new Scope("elif", currentScope);
+                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
         }
     }
 
@@ -225,7 +226,7 @@ public class SymbolTableGenerator implements MoolaListener {
                 grandparent instanceof MoolaParser.ClosedConditionalContext ||
                 grandparent instanceof MoolaParser.OpenConditionalContext
                 ) return;
-        currentScope = new Scope("Block", currentScope);
+        currentScope = new Scope("Block", ctx.getStart().getLine(), currentScope);
     }
 
     @Override
@@ -270,7 +271,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatementClosedLoop(MoolaParser.StatementClosedLoopContext ctx) {
-        currentScope = new Scope("While", currentScope);
+        currentScope = new Scope("While", ctx.getStart().getLine(), currentScope);
     }
 
     @Override
@@ -280,7 +281,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatementOpenLoop(MoolaParser.StatementOpenLoopContext ctx) {
-        currentScope = new Scope("While", currentScope);
+        currentScope = new Scope("While", ctx.getStart().getLine(), currentScope);
     }
 
     @Override
