@@ -2,6 +2,7 @@ package compiler;
 
 import compiler.models.*;
 import compiler.models.Class;
+import compiler.models.Error;
 import gen.MoolaListener;
 import gen.MoolaParser;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -16,6 +17,8 @@ public class SymbolTableGenerator implements MoolaListener {
 
     private Scope currentScope;
 
+    ArrayList<Error> errors = new ArrayList<>();
+
     @Override
     public void enterProgram(MoolaParser.ProgramContext ctx) {
         currentScope = new Scope("Program", ctx.getStart().getLine(), null);
@@ -26,6 +29,11 @@ public class SymbolTableGenerator implements MoolaListener {
         while (currentScope.parent != null) currentScope = currentScope.parent;
 
         printTree(currentScope);
+
+        for (Error e :
+                errors) {
+            System.out.println(e.toString());
+        }
     }
 
     private void printTree(Scope scope) {
@@ -46,8 +54,19 @@ public class SymbolTableGenerator implements MoolaListener {
         if (ctx.classParent != null)
             parentClass = ctx.classParent.getText();
 
-        currentScope.table.put("class_" + ctx.className.getText(),
-                new Class(ctx.className.getText(), parentClass, isMainClass));
+        if (currentScope.table.containsKey("class_" + ctx.className.getText())) {
+            int line = ctx.start.getLine();
+            int column = ctx.className.getCharPositionInLine();
+
+            currentScope.table.put("class_" + ctx.className.getText() + "_" + line + "_" + column,
+                    new Class(ctx.className.getText(), parentClass, isMainClass));
+            errors.add(
+                    new Error(101, line, column, "class " + ctx.className.getText() + " has been defined already")
+            );
+        } else {
+            currentScope.table.put("class_" + ctx.className.getText(),
+                    new Class(ctx.className.getText(), parentClass, isMainClass));
+        }
         currentScope = new Scope("Class: " + ctx.className.getText(), ctx.getStart().getLine(), currentScope);
     }
 
@@ -72,7 +91,17 @@ public class SymbolTableGenerator implements MoolaListener {
 
         List<TerminalNode> ids = ctx.ID();
         for (TerminalNode id : ids) {
-            currentScope.table.put("field_" + id.toString(), new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
+            if(currentScope.table.containsKey("field_" + id.toString())) {
+                int line = ctx.start.getLine();
+                int column = id.getSymbol().getCharPositionInLine();
+                currentScope.table.put("field_" + id.toString() + id.toString() + "_" + line + "_" + column, new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
+                errors.add(
+                        new Error(103, line, column, "field " + id.toString() + " has been defined already")
+                );
+            }
+            else {
+                currentScope.table.put("field_" + id.toString(), new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
+            }
         }
     }
 
@@ -110,10 +139,38 @@ public class SymbolTableGenerator implements MoolaListener {
         if (ctx.methodAccessModifier != null)
             accessModifier = ctx.methodAccessModifier.getText();
 
-        currentScope.table.put("method_" + ctx.methodName.getText(),
-                new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
+        if(currentScope.table.containsKey("method_" + ctx.methodName.getText())){
+            ArrayList<String> savedParams = ((Method)currentScope.table.get("method_" + ctx.methodName.getText())).getParametersType();
+
+            boolean same = true;
+            for (int i = 0; i < savedParams.size(); i++) {
+                if(!paramTypes.get(i).equals(savedParams.get(i))){
+                    same = false;
+                    break;
+                }
+            }
+            if(same && paramTypes.size() == savedParams.size()){
+                int line = ctx.start.getLine();
+                int column = ctx.methodName.getCharPositionInLine();
+
+                currentScope.table.put("method_" + ctx.methodName.getText() + "_" + line + "_" + column,
+                        new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
+
+                errors.add(
+                        new Error(102, line, column, "method " + ctx.methodName.getText() + " has been defined already")
+                );
+            }
+            else{
+                currentScope.table.put("method_" + ctx.methodName.getText(),
+                        new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
+            }
+        }
+        else {
+            currentScope.table.put("method_" + ctx.methodName.getText(),
+                    new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
+        }
         currentScope = new Scope("Method: " + ctx.methodName.getText(), ctx.getStart().getLine(), currentScope);
-        for (int i =0; i<paramNames.size() ; i++) {
+        for (int i = 0; i < paramNames.size(); i++) {
             currentScope.table.put("input_" + paramNames.get(i), new MethodInput(paramNames.get(i), paramTypes.get(i)));
         }
     }
@@ -210,7 +267,18 @@ public class SymbolTableGenerator implements MoolaListener {
     public void enterStatementVarDef(MoolaParser.StatementVarDefContext ctx) {
         List<TerminalNode> ids = ctx.ID();
         for (TerminalNode id : ids) {
-            currentScope.table.put("var_" + id.toString(), new Var(id.toString()));
+
+            if(currentScope.table.containsKey("var_" + id.toString())) {
+                int line = ctx.start.getLine();
+                int column = id.getSymbol().getCharPositionInLine();
+                currentScope.table.put("var_" + id.toString() + "_" + line + "_" + column, new Var(id.toString()));
+                errors.add(
+                        new Error(103, line, column, "var " + id.toString() + " has been defined already")
+                );
+            }
+            else {
+                currentScope.table.put("var_" + id.toString(), new Var(id.toString()));
+            }
         }
     }
 

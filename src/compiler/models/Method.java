@@ -8,6 +8,10 @@ public class Method extends TableRow {
     String accessModifier;
     ArrayList<String> parametersType;
 
+    public ArrayList<String> getParametersType() {
+        return parametersType;
+    }
+
     public Method(String name, String returnType, String accessModifier, ArrayList<String> parametersType) {
         super(name);
         this.returnType = returnType;

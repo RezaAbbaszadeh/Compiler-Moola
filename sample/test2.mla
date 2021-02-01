@@ -1,8 +1,9 @@
 class A:
     public field f1,f2,f3,f4 int;
+    field f1 bool;
 
     function foo(input1: int, input2: bool, input3: A) returns string:
-        var result = "";
+        var result = "", result = "hello";
         if(input2 == true) begin
             var t = 20;
             while(input1>0) begin
@@ -26,6 +27,7 @@ end
 
 class B inherits Any:
    public field arr int[];
+   field arr int;
 
    private function doIt(a: A) returns Any:
         arr[0] = a.f1;
@@ -36,7 +38,7 @@ class B inherits Any:
 
    end
 
-   public function x() returns int:
+   public function x(b: int) returns int:
         if(a)
             if(b) var x = 0;
             else
@@ -45,6 +47,13 @@ class B inherits Any:
                         var y = 0;
 
    end
+   public function x(a: int) returns int:
+
+   end
+end
+
+class B:
+
 end
 
 
