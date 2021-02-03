@@ -10,6 +10,10 @@ public class Class extends TableRow{
         this.isMain = isMain;
     }
 
+    public String getParentClass() {
+        return parentClass;
+    }
+
     @Override
     public String getText() {
         return "Class:"+ printKeyValue("name", name) + printKeyValue("is Entry", String.valueOf(isMain)) + printKeyValue("inherits", parentClass);

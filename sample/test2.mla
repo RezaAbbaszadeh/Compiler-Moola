@@ -1,8 +1,8 @@
-class A:
+class A inherits A1:
     public field f1,f2,f3,f4 int;
     field f1 bool;
 
-    function foo(input1: int, input2: bool, input3: A) returns string:
+    function foo(input1: int, input2: bool, input3: notFoundClass) returns string:
         var result = "", result = "hello";
         if(input2 == true) begin
             var t = 20;
@@ -25,11 +25,11 @@ class A:
     end
 end
 
-class B inherits Any:
+class B inherits A:
    public field arr int[];
    field arr int;
 
-   private function doIt(a: A) returns Any:
+   private function doIt(a: A[]) returns Any:
         arr[0] = a.f1;
         arr[1] = a.f2;
         arr[2] = a.f3;
@@ -38,7 +38,7 @@ class B inherits Any:
 
    end
 
-   public function x(b: int) returns int:
+   public function x(a: int, b: int) returns int:
         if(a)
             if(b) var x = 0;
             else
@@ -66,4 +66,17 @@ entry class MyClass:
 
         return 0;
     end
+end
+
+
+class A1:
+    field d int;
+end
+
+class A2 inherits A3:
+
+end
+
+class A3 inherits A1:
+
 end

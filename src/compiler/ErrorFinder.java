@@ -1,8 +1,8 @@
 package compiler;
 
-import compiler.models.*;
 import compiler.models.Class;
 import compiler.models.Error;
+import compiler.models.Method;
 import gen.MoolaListener;
 import gen.MoolaParser;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -10,67 +10,103 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Hashtable;
 
-import static compiler.ErrorFinder.errors;
+public class ErrorFinder implements MoolaListener {
 
-public class SymbolTableGenerator implements MoolaListener {
-
+    static ArrayList<Error> errors = new ArrayList<>();
+    static ArrayList<Class> classes = new ArrayList<>();
     private Scope currentScope;
 
-    public Scope getRootNode(){
-        Scope s = currentScope;
-        while(s.parent!=null){
-            s = s.parent;
+    ErrorFinder(Scope rootNode) {
+        this.currentScope = rootNode;
+    }
+
+    void searchScope(String name, int lineNumber) {
+        for (Scope child :
+                currentScope.children) {
+            if (child.name.equals(name) && child.lineNumber == lineNumber) {
+                currentScope = child;
+                break;
+            }
         }
-        return s;
+    }
+
+    private Boolean classExists(String className) {
+        for (Class c :
+                classes) {
+            if (c.getName().equals(className))
+                return true;
+        }
+        return false;
     }
 
     @Override
     public void enterProgram(MoolaParser.ProgramContext ctx) {
-        currentScope = new Scope("Program", ctx.getStart().getLine(), null);
+
+        classes.add(new Class("Any", "", false));
+//        Iterator<String> it = currentScope.table.keySet().iterator();
+//        while (it.hasNext()) {
+//            String key = it.next();
+//            if (key.startsWith("class_")) {
+//                classes.add(key.substring(key.indexOf("_") + 1));
+//            }
+//        }
+
+        currentScope.table.forEach((k, v) -> {
+            if (k.startsWith("class_")) {
+                classes.add((Class) v);
+            }
+        });
+
+        for (Class c :
+                classes) {
+            ArrayList<Class> parents = new ArrayList<>();
+            Class p = (Class) currentScope.table.getOrDefault("class_" + c.getParentClass(), null);
+            boolean repeated = false;
+            StringBuilder heir = new StringBuilder(c.getName());
+            while (p != null) {
+                for (Class parent : parents) {
+                    if (parent.equals(p)) {
+                        errors.add(
+                                new Error(410, 0, 0, "Invalid inheritance " + heir)
+                        );
+                        repeated = true;
+                        break;
+                    }
+                }
+                if (repeated) {
+                    break;
+                }
+                parents.add(p);
+
+                heir.append(" -> ").append(p.getName());
+                p = (Class) currentScope.table.getOrDefault("class_" + p.getParentClass(), null);
+            }
+        }
+
+
+/*
+        System.out.println(classes.size());
+        for (int i = 0; i < classes.size(); i++) {
+            System.out.println(classes.get(i));
+        }*/
+
     }
 
     @Override
     public void exitProgram(MoolaParser.ProgramContext ctx) {
-        while (currentScope.parent != null) currentScope = currentScope.parent;
-
-        printTree(currentScope);
-    }
-
-    private void printTree(Scope scope) {
-        System.out.println("-------------- " + scope.name + " : " + scope.lineNumber + " --------------");
-        for (Map.Entry<String, TableRow> row : scope.table.entrySet()) {
-            System.out.println("Key = " + row.getKey() + " | Value = " + row.getValue().getText());
-        }
-        System.out.println("----------------------------------------\n");
-        for (Scope child : scope.children) {
-            printTree(child);
+        for (Error e :
+                errors) {
+            System.out.println(e.toString());
         }
     }
 
     @Override
     public void enterClassDeclaration(MoolaParser.ClassDeclarationContext ctx) {
-        boolean isMainClass = ctx.getParent() instanceof MoolaParser.EntryClassDeclarationContext;
-        String parentClass = "Any";
-        if (ctx.classParent != null)
-            parentClass = ctx.classParent.getText();
+        Class x = (Class) currentScope.table.get("class_" + ctx.className.getText());
 
-        if (currentScope.table.containsKey("class_" + ctx.className.getText())) {
-            int line = ctx.start.getLine();
-            int column = ctx.className.getCharPositionInLine();
-
-            currentScope.table.put("class_" + ctx.className.getText() + "_" + line + "_" + column,
-                    new Class(ctx.className.getText(), parentClass, isMainClass));
-            errors.add(
-                    new Error(101, line, column, "class " + ctx.className.getText() + " has been defined already")
-            );
-        } else {
-            currentScope.table.put("class_" + ctx.className.getText(),
-                    new Class(ctx.className.getText(), parentClass, isMainClass));
-        }
-        currentScope = new Scope("Class: " + ctx.className.getText(), ctx.getStart().getLine(), currentScope);
+        searchScope("Class: " + x.getName(), ctx.getStart().getLine());
     }
 
     @Override
@@ -80,32 +116,17 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterEntryClassDeclaration(MoolaParser.EntryClassDeclarationContext ctx) {
+
     }
 
     @Override
     public void exitEntryClassDeclaration(MoolaParser.EntryClassDeclarationContext ctx) {
+
     }
 
     @Override
     public void enterFieldDeclaration(MoolaParser.FieldDeclarationContext ctx) {
-        String accessModifier = "private";
-        if (ctx.fieldAccessModifier != null)
-            accessModifier = ctx.fieldAccessModifier.getText();
 
-        List<TerminalNode> ids = ctx.ID();
-        for (TerminalNode id : ids) {
-            if(currentScope.table.containsKey("field_" + id.toString())) {
-                int line = ctx.start.getLine();
-                int column = id.getSymbol().getCharPositionInLine();
-                currentScope.table.put("field_" + id.toString() + id.toString() + "_" + line + "_" + column, new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
-                errors.add(
-                        new Error(103, line, column, "field " + id.toString() + " has been defined already")
-                );
-            }
-            else {
-                currentScope.table.put("field_" + id.toString(), new Field(id.toString(), ctx.fieldType.getText(), accessModifier));
-            }
-        }
     }
 
     @Override
@@ -125,57 +146,9 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterMethodDeclaration(MoolaParser.MethodDeclarationContext ctx) {
-        StringBuilder type = new StringBuilder();
-        ArrayList<String> paramTypes = new ArrayList<>();
-        ArrayList<String> paramNames = new ArrayList<>();
-        if (ctx.param1 != null) {
-//            paramTypes.add(ctx.typeP1.getText());
-            List<MoolaParser.MoolaTypeContext> inputs = ctx.moolaType();
-            List<TerminalNode> names = ctx.ID();
-            for (int i = 0; i < inputs.size() - 1; i++) { //param2 s
-                paramTypes.add(inputs.get(i).st.getText());
-                paramNames.add(names.get(i + 1).getSymbol().getText());
-            }
-        }
+        Method x = (Method) currentScope.table.get("method_" + ctx.methodName.getText());
 
-        String accessModifier = "public";
-        if (ctx.methodAccessModifier != null)
-            accessModifier = ctx.methodAccessModifier.getText();
-
-        if(currentScope.table.containsKey("method_" + ctx.methodName.getText())){
-            ArrayList<String> savedParams = ((Method)currentScope.table.get("method_" + ctx.methodName.getText())).getParametersType();
-
-            boolean same = true;
-            for (int i = 0; i < Math.min(savedParams.size(), paramTypes.size()); i++) {
-                if(!paramTypes.get(i).equals(savedParams.get(i))){
-                    same = false;
-                    break;
-                }
-            }
-            if(same && paramTypes.size() == savedParams.size()){
-                int line = ctx.start.getLine();
-                int column = ctx.methodName.getCharPositionInLine();
-
-                currentScope.table.put("method_" + ctx.methodName.getText() + "_" + line + "_" + column,
-                        new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
-
-                errors.add(
-                        new Error(102, line, column, "method " + ctx.methodName.getText() + " has been defined already")
-                );
-            }
-            else{
-                currentScope.table.put("method_" + ctx.methodName.getText(),
-                        new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
-            }
-        }
-        else {
-            currentScope.table.put("method_" + ctx.methodName.getText(),
-                    new Method(ctx.methodName.getText(), ctx.t.getText(), accessModifier, paramTypes));
-        }
-        currentScope = new Scope("Method: " + ctx.methodName.getText(), ctx.getStart().getLine(), currentScope);
-        for (int i = 0; i < paramNames.size(); i++) {
-            currentScope.table.put("input_" + paramNames.get(i), new MethodInput(paramNames.get(i), paramTypes.get(i)));
-        }
+        searchScope("Method: " + x.getName(), ctx.getStart().getLine());
     }
 
     @Override
@@ -185,23 +158,27 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterClosedStatement(MoolaParser.ClosedStatementContext ctx) {
+        String name = "";
         if (ctx.getParent() instanceof MoolaParser.ClosedConditionalContext) {
             MoolaParser.ClosedConditionalContext p = (MoolaParser.ClosedConditionalContext) ctx.getParent();
             if (p.ifStat == ctx)
-                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
+                name = "if";
             else if (p.elifStat == ctx)
-                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
+                name = "elif";
             else
-                currentScope = new Scope("else", ctx.getStart().getLine(), currentScope);
+                name = "else";
+            searchScope(name, ctx.getStart().getLine());
         } else if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
             if (p.secondIfStat == ctx)
-                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
+                name = "if";
             else if (p.closedStatement().subList(1, p.closedStatement().size()).contains(ctx))
-                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
+                name = "elif";
             else if (p.thirdIfStat == ctx)
-                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
+                name = "if";
+            searchScope(name, ctx.getStart().getLine());
         }
+
     }
 
     @Override
@@ -215,6 +192,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterClosedConditional(MoolaParser.ClosedConditionalContext ctx) {
+
     }
 
     @Override
@@ -236,8 +214,9 @@ public class SymbolTableGenerator implements MoolaListener {
     public void enterOpenStatement(MoolaParser.OpenStatementContext ctx) {
         if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
-            if (p.elseStmt == ctx)
-                currentScope = new Scope("else", ctx.getStart().getLine(), currentScope);
+            if (p.elseStmt == ctx) {
+                searchScope("else", ctx.getStart().getLine());
+            }
         }
     }
 
@@ -250,12 +229,16 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatement(MoolaParser.StatementContext ctx) {
+        String name = "";
         if (ctx.getParent() instanceof MoolaParser.OpenConditionalContext) {
             MoolaParser.OpenConditionalContext p = (MoolaParser.OpenConditionalContext) ctx.getParent();
-            if (p.ifStat == ctx)
-                currentScope = new Scope("if", ctx.getStart().getLine(), currentScope);
-            else if (p.lastElifStmt == ctx)
-                currentScope = new Scope("elif", ctx.getStart().getLine(), currentScope);
+            if (p.ifStat == ctx) {
+                name = "if";
+                searchScope(name, ctx.getStart().getLine());
+            } else if (p.lastElifStmt == ctx) {
+                name = "elif";
+                searchScope(name, ctx.getStart().getLine());
+            }
         }
     }
 
@@ -268,21 +251,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatementVarDef(MoolaParser.StatementVarDefContext ctx) {
-        List<TerminalNode> ids = ctx.ID();
-        for (TerminalNode id : ids) {
 
-            if(currentScope.table.containsKey("var_" + id.toString())) {
-                int line = ctx.start.getLine();
-                int column = id.getSymbol().getCharPositionInLine();
-                currentScope.table.put("var_" + id.toString() + "_" + line + "_" + column, new Var(id.toString()));
-                errors.add(
-                        new Error(103, line, column, "var " + id.toString() + " has been defined already")
-                );
-            }
-            else {
-                currentScope.table.put("var_" + id.toString(), new Var(id.toString()));
-            }
-        }
     }
 
     @Override
@@ -297,7 +266,7 @@ public class SymbolTableGenerator implements MoolaListener {
                 grandparent instanceof MoolaParser.ClosedConditionalContext ||
                 grandparent instanceof MoolaParser.OpenConditionalContext
                 ) return;
-        currentScope = new Scope("Block", ctx.getStart().getLine(), currentScope);
+        searchScope("Block", ctx.getStart().getLine());
     }
 
     @Override
@@ -342,7 +311,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatementClosedLoop(MoolaParser.StatementClosedLoopContext ctx) {
-        currentScope = new Scope("While", ctx.getStart().getLine(), currentScope);
+        searchScope("While", ctx.getStart().getLine());
     }
 
     @Override
@@ -352,7 +321,7 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterStatementOpenLoop(MoolaParser.StatementOpenLoopContext ctx) {
-        currentScope = new Scope("While", ctx.getStart().getLine(), currentScope);
+        searchScope("While", ctx.getStart().getLine());
     }
 
     @Override
@@ -562,6 +531,77 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterExpressionOther(MoolaParser.ExpressionOtherContext ctx) {
+        if (ctx.i1 != null) {
+            int line = ctx.start.getLine();
+            int column = ctx.i1.getCharPositionInLine();
+            System.out.println(ctx.i1.getText() + " " + line);
+
+            boolean found = false;
+            // check parents in Tree
+            Scope tmp = currentScope;
+            while (tmp != null) {
+                if (tmp.table.containsKey("var_" + ctx.i1.getText()) ||
+                        tmp.table.containsKey("field_" + ctx.i1.getText()) ||
+                        tmp.table.containsKey("input_" + ctx.i1.getText())
+                        ) {
+                    found = true;
+                }
+                tmp = tmp.parent;
+            }
+
+            // check inherited parents
+            Scope classScope = currentScope;
+            while (!classScope.name.startsWith("Class: ")) {
+                classScope = classScope.parent;
+            }
+            String className = classScope.name.substring(7);
+            classScope = classScope.parent;
+            Class c = (Class) classScope.table.get("class_" + className);
+
+            ArrayList<Class> parents = new ArrayList<>();
+            Class p = (Class) classScope.table.getOrDefault("class_" + c.getParentClass(), null);
+            boolean repeated = false;
+
+            if (ctx.i1.getText().equals("d")) {
+
+
+                while (p != null) {
+                    Hashtable parentTable = null;
+                    for (Scope scope :
+                            classScope.children) {
+                        if (scope.name.equals("Class: " + p.getName())) {
+                            parentTable = scope.table;
+                            break;
+                        }
+                    }
+//                if (parentTable == null)
+//                    return;
+                    if (parentTable.containsKey("field_" + ctx.i1.getText())) {
+                        found = true;
+                        break;
+                    }
+
+                    for (Class parent : parents) {
+                        if (parent.equals(p)) {
+                            repeated = true;
+                            break;
+                        }
+                    }
+                    if (repeated) {
+                        break;
+                    }
+
+                    parents.add(p);
+                    p = (Class) classScope.table.getOrDefault("class_" + p.getParentClass(), null);
+                }
+            }
+
+            if (!found) {
+                errors.add(
+                        new Error(106, line, column, "in line " + line + ":" + column + ", Can not find Variable " + ctx.i1.getText())
+                );
+            }
+        }
 
     }
 
@@ -582,7 +622,13 @@ public class SymbolTableGenerator implements MoolaListener {
 
     @Override
     public void enterSingleType(MoolaParser.SingleTypeContext ctx) {
-
+        if (ctx.i != null) {
+            if (!classExists(ctx.i.getText())) {
+                int line = ctx.start.getLine();
+                int column = ctx.i.getCharPositionInLine();
+                errors.add(new Error(105, line, column, "cannot find class " + ctx.i.getText()));
+            }
+        }
     }
 
     @Override

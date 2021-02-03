@@ -7,6 +7,10 @@ abstract public class TableRow {
         this.name = name;
     }
 
+    public String getName() {
+        return name;
+    }
+
     abstract public String getText();
 
     String printKeyValue(String key, String value){

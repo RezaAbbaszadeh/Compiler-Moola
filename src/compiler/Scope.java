@@ -20,4 +20,7 @@ class Scope {
             parent.children.add(this);
     }
 
+    public String getName() {
+        return name;
+    }
 }
