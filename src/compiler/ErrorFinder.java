@@ -68,8 +68,15 @@ public class ErrorFinder implements MoolaListener {
             while (p != null) {
                 for (Class parent : parents) {
                     if (parent.equals(p)) {
+                        int line = 0;
+                        for (Scope s :
+                                currentScope.children) {
+                            if (s.name.equals("Class: " + c.getName())) {
+                                line = s.lineNumber;
+                            }
+                        }
                         errors.add(
-                                new Error(410, 0, 0, "Invalid inheritance " + heir)
+                                new Error(410, line, 0, "Invalid inheritance " + heir)
                         );
                         repeated = true;
                         break;
@@ -534,7 +541,6 @@ public class ErrorFinder implements MoolaListener {
         if (ctx.i1 != null) {
             int line = ctx.start.getLine();
             int column = ctx.i1.getCharPositionInLine();
-            System.out.println(ctx.i1.getText() + " " + line);
 
             boolean found = false;
             // check parents in Tree
@@ -545,6 +551,7 @@ public class ErrorFinder implements MoolaListener {
                         tmp.table.containsKey("input_" + ctx.i1.getText())
                         ) {
                     found = true;
+                    return;
                 }
                 tmp = tmp.parent;
             }
@@ -562,38 +569,33 @@ public class ErrorFinder implements MoolaListener {
             Class p = (Class) classScope.table.getOrDefault("class_" + c.getParentClass(), null);
             boolean repeated = false;
 
-            if (ctx.i1.getText().equals("d")) {
 
-
-                while (p != null) {
-                    Hashtable parentTable = null;
-                    for (Scope scope :
-                            classScope.children) {
-                        if (scope.name.equals("Class: " + p.getName())) {
-                            parentTable = scope.table;
-                            break;
-                        }
-                    }
-//                if (parentTable == null)
-//                    return;
-                    if (parentTable.containsKey("field_" + ctx.i1.getText())) {
-                        found = true;
+            while (p != null) {
+                Hashtable parentTable = null;
+                for (Scope scope :
+                        classScope.children) {
+                    if (scope.name.equals("Class: " + p.getName())) {
+                        parentTable = scope.table;
                         break;
                     }
-
-                    for (Class parent : parents) {
-                        if (parent.equals(p)) {
-                            repeated = true;
-                            break;
-                        }
-                    }
-                    if (repeated) {
-                        break;
-                    }
-
-                    parents.add(p);
-                    p = (Class) classScope.table.getOrDefault("class_" + p.getParentClass(), null);
                 }
+                if (parentTable.containsKey("field_" + ctx.i1.getText())) {
+                    found = true;
+                    return;
+                }
+
+                for (Class parent : parents) {
+                    if (parent.equals(p)) {
+                        repeated = true;
+                        break;
+                    }
+                }
+                if (repeated) {
+                    break;
+                }
+
+                parents.add(p);
+                p = (Class) classScope.table.getOrDefault("class_" + p.getParentClass(), null);
             }
 
             if (!found) {
@@ -601,6 +603,75 @@ public class ErrorFinder implements MoolaListener {
                         new Error(106, line, column, "in line " + line + ":" + column + ", Can not find Variable " + ctx.i1.getText())
                 );
             }
+        } else if (ctx.i != null) {
+            if (!classExists(ctx.i.getText())) {
+                int line = ctx.start.getLine();
+                int column = ctx.i.getCharPositionInLine();
+                errors.add(new Error(105, line, column, "cannot find class " + ctx.i.getText()));
+            }
+        } else if (ctx.i3 != null) {
+            int line = ctx.start.getLine();
+            int column = ctx.i3.getCharPositionInLine();
+
+            boolean found = false;
+            // check parents in Tree
+            Scope tmp = currentScope;
+            while (tmp != null) {
+                if (tmp.table.containsKey("method_" + ctx.i3.getText())) {
+                    found = true;
+                    return;
+                }
+                tmp = tmp.parent;
+            }
+
+            // check inherited parents
+            Scope classScope = currentScope;
+            while (!classScope.name.startsWith("Class: ")) {
+                classScope = classScope.parent;
+            }
+            String className = classScope.name.substring(7);
+            classScope = classScope.parent;
+            Class c = (Class) classScope.table.get("class_" + className);
+
+            ArrayList<Class> parents = new ArrayList<>();
+            Class p = (Class) classScope.table.getOrDefault("class_" + c.getParentClass(), null);
+            boolean repeated = false;
+
+
+            while (p != null) {
+                Hashtable parentTable = null;
+                for (Scope scope :
+                        classScope.children) {
+                    if (scope.name.equals("Class: " + p.getName())) {
+                        parentTable = scope.table;
+                        break;
+                    }
+                }
+                if (parentTable.containsKey("method_" + ctx.i3.getText())) {
+                    found = true;
+                    return;
+                }
+
+                for (Class parent : parents) {
+                    if (parent.equals(p)) {
+                        repeated = true;
+                        break;
+                    }
+                }
+                if (repeated) {
+                    break;
+                }
+
+                parents.add(p);
+                p = (Class) classScope.table.getOrDefault("class_" + p.getParentClass(), null);
+            }
+
+            if (!found) {
+                errors.add(
+                        new Error(107, line, column, "in line " + line + ":" + column + ", Can not find Method " + ctx.i3.getText())
+                );
+            }
+
         }
 
     }

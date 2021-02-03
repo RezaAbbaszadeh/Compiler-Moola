@@ -36,9 +36,11 @@ class B inherits A:
 
         print(a.foo());
 
+        var x = g(10, 20);
    end
 
    public function x(a: int, b: int) returns int:
+        var x = new N();
         if(a)
             if(b) var x = 0;
             else
@@ -48,7 +50,6 @@ class B inherits A:
 
    end
    public function x(a: int) returns int:
-
    end
 end
 
@@ -73,10 +74,16 @@ class A1:
     field d int;
 end
 
+
 class A2 inherits A3:
 
 end
 
-class A3 inherits A1:
+class A3 inherits A4:
+
+end
+
+
+class A4 inherits A2:
 
 end
